@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+
+
+
+
+def main(roi, epi1, epi2): 
+    return 
+
+
+
+class SWARM: 
+    def __init__(self): 
+        
+        self.template = 'swarm'
+    
+    def submit(self): 
+        return 
+    
+    
+    
+    
+    
+class swarm_3dTcorr1D:
+    def __init__(self, roi, epi=None, epi1=None, epi2=None): 
+        self.roi = roi 
+        self.epi = epi 
+        self.epi1 = epi1 
+        self.epi2 = epi2 
+        
+        
+        if self.epi1 == None and self.epi2 == None: 
+            
+        
+        if epi != None: 
+            self.epi = epi
+            
+        elif epi1 != None: 
+            self.epi = epi1 
+            self.epi1 = epi1 
+            
+        elif self.epi2 != :
+            self.epi2 = epi2 
+        
+        
+    def get_coords_from_roi(self): 
+        
+        coords = 1,1,1
+        
+        return coords
+        
+    def create_batches(self):
+        cmd =  "module load afni; "
+        cmd += "mkdir tmp_3dTcorr1D_{}; cd tmp3dTcorr_{} ; "
+        cmd += "3dmaskave -xyz {} ; "
+        

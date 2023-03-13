@@ -1,0 +1,450 @@
+#!/bin/bash
+
+# todo: cleanup EPI, EPI_base, VASO_func_dir vars
+
+# sinteractive --mem=2g --cpus-per-task=10
+
+#####################################################
+#export spm_path='/home/richard/matlab_toolbox'
+module load matlab matlab-spm ANTs afni freesurfer fsl python git
+
+
+#export ds_dir='/media/richard/bfb1e328-6d97-4280-8331-5daeb988f70a/bandettini/ds003216-download'
+export ds_dir='/data/kleinrl/Wholebrain2.0'
+export project_dir='/home/kleinrl/projects/laminar_fmri'
+export logs="${ds_dir}/logs"
+
+# set EPI_base variable
+# if running through loop
+if [ -z "$EPI" ] ;
+then
+  export EPI="${ds_dir}/DAY3/run5/VASO_LN.nii"
+  echo "                         "
+  echo "EPI not set using: ${EPI}"
+else
+  echo "                        "
+  echo "EPI set using: ${EPI}"
+fi
+
+
+############################################################
+
+# $EPI is inherited from main_EPI.sh or main_EPI_looper.sh - nto sure it thats best
+export EPI_dir=$(dirname $EPI)
+export EPI_base=$(basename $EPI .nii)
+export EPI_base_path=${EPI_dir}/${EPI_base}
+export EPI_orig=$(dirname $EPI)/$(basename $EPI .nii).orig.nii.gz
+
+
+
+
+export scaled_EPI=${EPI_dir}/${EPI_base}.scaled.nii
+export scaled_EPI_mean=${EPI_dir}/${EPI_base}.scaled.mean.nii
+
+#export project_dir="$(pwd)/$(dirname ${BASH_SOURCE[0]})"
+
+export tools_dir="${project_dir}/tools"
+export cmds_dir="${project_dir}/cmds"
+export PATH="${tools_dir}:$PATH"
+
+export LAYNII_dir="/home/kleinrl/bin/LAYNII"
+export PATH="${LAYNII_dir}:$PATH"
+
+export scripts_batch_dir="${project_dir}/scripts_batch_wholebrain"
+export PATH="${scripts_batch_dir}:$PATH"
+
+export scripts_dir="${project_dir}/scripts_wholebrain"
+export PATH="${scripts_dir}:$PATH"
+
+export analyses_dir="${project_dir}/analyses_wholebrain"
+export PATH="${analyses_dir}:$PATH"
+
+
+export scriptBaseDir=$tools_dir/multiAtlasTT
+export atlasBaseDir=$scriptBaseDir/atlas_data
+
+
+export VASO_func_dir=$EPI_dir # need to cleanup
+#export EPIs="${VASO_func_dir}/*VASO.nii"
+
+export EPIs=($(find $ds_dir -name "VASO_LN.nii"))
+export EPI_means=($(find $ds_dir -name "VASO_LN.mean.nii"))
+export EPI_mean_all=$ds_dir/VASO_LN.MEAN.nii
+export EPI_mean_all_bias=$ds_dir/VASO_LN.MEAN.bias.nii
+
+export T1Ws=($(find $ds_dir -name "T1w.nii"))
+export T1Ws_mean=$ds_dir/T1Ws.mean.nii
+
+
+
+# for e in ${EPIs[@]}; do 
+#   echo $e
+# done 
+
+
+echo "                                                         "
+echo "----------------------------------"
+echo "YOU NEED TO SUPPLY: "
+echo "               spm_path - location of spm files ('matlab_toolbox')"
+echo "               ds_dir - location of data ('ds003216-download')"
+echo "               EPI_base - currently working with "
+echo "                         'sub-01_ses-06_task-movie_run-05_VASO' "
+echo "                         main_anat.sh for processing MP2RAGE, then loop "
+echo "                         main_EPI.sh for each EPI"
+echo "----------------------------------"
+echo "project_dir: ${project_dir}"
+echo "spm_path:    ${spm_path}"
+echo "tools_dir:   ${tools_dir}"
+echo "cmds_dir:    ${cmds_dir}"
+echo "EPI:         ${EPI}"
+echo "EPI_base     ${EPI_base}"
+echo "----------------------------------"
+echo "                                                                                "
+echo "                                                                                "
+
+
+# todo: ANAT_base assumption
+# I chose one of the two anat session
+#export ANAT_base="ANAT_2"
+export ANAT_base="inv_EPI"
+export ANAT_base_dir="${ds_dir}/ANAT/ANAT_inv_EPI/"
+export ANAT="$ANAT_base_dir/${ANAT_base}.nii"
+export ANAT_bias="$ANAT_base_dir/${ANAT_base}.bias.nii"
+export ANAT_bias_dir="$(dirname $ANAT)/$(basename $ANAT .nii)_working_bias"
+
+
+
+
+export SUBJECTS_DIR="$(dirname $ANAT)/$(basename $ANAT .nii)_working_recon-all"
+export subjid="$(basename $ANAT .nii)"
+export expert="${SUBJECTS_DIR}/expert.opts"
+export recon_dir="${SUBJECTS_DIR}/${subjid}"
+
+export manualedit_log="$recon_dir/mri/manualedit.log"
+
+
+export layer_dir="$recon_dir/LAYNII"
+export suma_dir="$recon_dir/SUMA"
+export scaled_suma_dir="$recon_dir/SUMA_scaled"
+
+export layer4EPI=$layer_dir"_"$EPI_base
+
+export seg_wm="${recon_dir}/mri/wm.mgz"
+export seg_brain="${recon_dir}/mri/brain.mgz"
+export seg_brain_bin="${recon_dir}/mri/brain.bin.mgz"
+
+export seg_brainmask="${recon_dir}/mri/brainmask.mgz"
+#export seg_brainmask_bin="${recon_dir}/mri/brainmask.bin.mgz"
+
+#export seg_brainmask="${recon_dir}/mri/brainmask.scaled.mgz"
+#export seg_brainmask_bin_scaled="${recon_dir}/mri/brainmask.bin.scaled.mgz"
+
+# for main_surfLayer.sh
+export ANAT_bias_2EPI="$(dirname ${ANAT_bias})/$(basename ${ANAT_bias} .nii).$EPI_base.ANAT2EPI.nii"
+export ANAT_bias_2EPI_mgz="$(dirname ${ANAT_bias})/$(basename ${ANAT_bias} .nii).$EPI_base.ANAT2EPI.mgz"
+
+export seg_wm_2EPI="$(dirname ${seg_wm})/$(basename ${seg_wm} .nii).$EPI_base.ANAT2EPI.nii"
+export seg_wm_2EPI_mgz="$(dirname ${seg_wm})/$(basename ${seg_wm} .nii).$EPI_base.ANAT2EPI.mgz"
+
+export seg_brain_2EPI="$(dirname ${seg_brain})/$(basename ${seg_brain} .nii).$EPI_base.ANAT2EPI.nii"
+export seg_brain_2EPI_mgz="$(dirname ${seg_brain})/$(basename ${seg_brain} .nii).$EPI_base.ANAT2EPI.mgz"
+
+
+
+
+export surf_white_rh="${recon_dir}/surf/rh.white"
+export surf_white_lh="${recon_dir}/surf/lh.white"
+
+
+#export LUT="$SUBJECTS_DIR/FreeSurferColorLUT.txt"
+#export LUT_hcp="$SUBJECTS_DIR/HCPMMP1_LUT_ordered_RS.txt"
+export LUT_fs="$SUBJECTS_DIR/FreeSurferColorLUT.txt"
+#export LUT_hcp="$SUBJECTS_DIR/HCPMMP1_LUT_original_RS.txt"
+export LUT_hcp="$tools_dir/LUT_hcp-mmp-b_v2.txt"
+export LUT_thalamic="$tools_dir/LUT_thalamic.txt"
+export LUT_columns="$layer4EPI/columns_equivol_1000/LUT_columns_1000_equivol.txt"
+export LUT_leakylayers3="$tools_dir/LUT_leakylayers3.txt"
+export LUT_leakylayers10="$tools_dir/LUT_leakylayers10.txt"
+
+
+#export ANTs_dir="$ds_dir/ANAT_newinitxfm_working_ANTs"
+export ANTs_dir="$ds_dir/ANAT_ANAT2VASO4_working_ANTs"
+
+export xfm_auto="${ANTs_dir}/initial_matrix.txt"
+export ANAT_warped="${ANTs_dir}/warped_MP2RAGE.nii"
+export ANTs_reg_1warp="$ANTs_dir/registered_1Warp.nii.gz"
+export ANTs_reg_1warp_inverse="$ANTs_dir/registered_1InverseWarp.nii.gz"
+export ANTs_reg_0GenAffine="$ANTs_dir/registered_0GenericAffine.mat"
+
+#export rim="${layer4EPI}/rim.nii"
+
+#export warp_rim="${layer4EPI}/warped_rim.nii"
+
+
+
+## EPI
+###########################
+# todo: NEED TO EDIT THIS
+#export EPI="${VASO_func_dir}/${EPI_base}.nii"
+#export EPI_N4bias="${layer4EPI}/${EPI_base}.N4bias.nii"
+export EPI_N4bias="${VASO_func_dir}/${EPI_base}.N4bias.nii"
+#export EPI_detrend="${VASO_func_dir}/${EPI_base}.N4bias.detrend.nii"
+export EPI_detrend="${VASO_func_dir}/${EPI_base}.N4bias.detrend.pol1.nii"
+
+export EPI_detrend_pol_1="${VASO_func_dir}/${EPI_base}.N4bias.detrend.pol-1.nii"
+export EPI_detrend_pol0="${VASO_func_dir}/${EPI_base}.N4bias.detrend.pol0.nii"
+export EPI_detrend_pol1="${VASO_func_dir}/${EPI_base}.N4bias.detrend.pol1.nii"
+export EPI_detrend_pol2="${VASO_func_dir}/${EPI_base}.N4bias.detrend.pol2.nii"
+export EPI_detrend_pol3="${VASO_func_dir}/${EPI_base}.N4bias.detrend.pol3.nii"
+export EPI_detrend_pol4="${VASO_func_dir}/${EPI_base}.N4bias.detrend.pol4.nii"
+
+#export EPI_detrend_mean="${VASO_func_dir}/${EPI_base}.detrend.mean.nii"
+#export EPI_detrend_demean="${VASO_func_dir}/${EPI_basN4e}.drend.demean.nii"
+
+#export EN4PI_base="$(basename ${EPI} .nii)"
+export EPI_base_path="${VASO_func_dir}/${EPI_base}"
+export EPI_mean="${EPI_base_path}.mean.nii"
+export EPI_bias="${EPI_base_path}_working_bias/muncorr.nii" # need to change this to 'export EPI_bias="${EPI_base}.bias.nii" '
+
+export EPI_gsr="${EPI_base_path}.gsr.nii.gz"
+export EPI_gsr_mean="${EPI_base_path}.gsr.mean.nii.gz"
+
+export scaled_EPI_gsr="${EPI_base_path}.gsr.scaled.nii.gz"
+export scaled_EPI_gsr_mean="${EPI_base_path}.gsr.scaled.mean.nii.gz"
+
+
+# DELETE scaled used for layer=10 ... not used anymore
+#export EPIs_scaled_dir="/mnt/9c288662-e3a3-4d3f-b859-eb0521c7da77/bandettini_data/scaled_runs"
+#export EPI_scaled="${EPIs_scaled_dir}/scaled_${EPI_base}.nii"
+#export EPI_scaled="${EPIs_scaled_dir}N4/scaled_${EPI_base}_mean.nii"
+#export EPI_scaled_mean="${EPIs_scaled_dir}/scaled_${EPI_base}.mean.nii"
+
+
+
+# extract ROIs and cacl corr mat
+
+# parcellations
+export parc_hcp="$recon_dir/multiAtlasTT/hcp-mmp-b/hcp-mmp-b.nii.gz"
+
+export warp_parc_hcp="$layer4EPI/warped_hcp-mmp-b.nii"
+
+#export parc_thalamic="$recon_dir/mri/ThalamicNuclei.v12.T1.mgz"
+
+export parc_thalamic="$recon_dir/mri/ThalamicNuclei.v12.T1.nii"
+
+export warp_parc_thalamic="$layer4EPI/warped_ThalamicNuclei.v12.T1.nii"
+
+
+export warp_brain="$layer4EPI/warped_brain.nii.gz"
+export warp_brain_bin="$layer4EPI/warped_brain.bin.nii.gz"
+
+export warp_brain="$layer4EPI/warped_brain.nii.gz"
+export warp_scaled_brain="$layer4EPI/warped_brain.scaled.nii.gz"
+export warp_scaled_brain_bin="$layer4EPI/warped_brain.scaled.bin.nii.gz"
+
+export warp_scaled_brainmask="$layer4EPI/warped_brainmask.scaled.nii.gz"
+export warp_scaled_brainmask_bin="$layer4EPI/warped_brainmask.scaled.bin.nii.gz"
+
+export global_signal_1D="$VASO_func_dir/$EPI_base.global_signal.1D"
+
+
+#export leakylayers3="$layer4EPI/leaky_layers_n3.nii"
+export layers_ed_n10="${layer_dir}/equi_distance_layers_n10.nii"  
+export layers_ed_n3="${layer_dir}/equi_distance_layers_n3.nii"
+export layers_ev_n10="${layer_dir}/equi_volume_layers_n10.nii"
+export layers_ev_n3="${layer_dir}/equi_volume_layers_n3.nii"
+
+export rim="${layer_dir}/rim.nii"
+export rim_EPI_FOV="${layer_dir}/rim_EPIFOV.nii"
+
+
+
+export warp_layers_ed_n10="${layer4EPI}/warped_equi_distance_layers_n10.nii"  
+export warp_layers_ed_n3="${layer4EPI}/warped_equi_distance_layers_n3.nii"
+export warp_layers_ev_n10="${layer4EPI}/warped_equi_volume_layers_n10.nii"
+export warp_layers_ev_n3="${layer4EPI}/warped_equi_volume_layers_n3.nii"
+export warp_rim="${layer4EPI}/warped_rim.nii"
+
+
+#export columns_ev_1000="$layer_dir/columns_equivol_1000/rim_columns1000.nii"
+#export columns_ev_10000="$layer_dir/columns_equivol_10000/rim_columns10000.nii"
+export columns_ev_10000_borders="$layer_dir/columns_ev_10000_borders.nii"
+
+
+#export warp_columns_ev_1000="$layer4EPI/warped_rim_columns1000.nii"
+#export warp_columns_ev_10000_borders="$layer4EPI/warped_columns_ev_10000_borders.nii"
+
+
+# resampled 
+
+# export warp_rs_parc_hcp="$layer4EPI/warped_hcp-mmp-b.resample2muncorr.nii"
+# export warp_rs_parc_thalamic="$layer4EPI/warped_ThalamicNuclei.v12.T1.resample2muncorr.nii"
+# export warp_rs_layers_ed_n10="$layer4EPI/warped_equi_distance_layers_n10.resample2muncorr.nii"  
+# export warp_rs_layers_ed_n3="$layer4EPI/warped_equi_distance_layers_n3.resample2muncorr.nii"
+# export warp_rs_layers_ev_n10="$layer4EPI/warped_equi_volume_layers_n10.resample2muncorr.nii"
+# export warp_rs_layers_ev_n3="$layer4EPI/warped_equi_volume_layers_n3.resample2muncorr.nii"
+# export warp_rs_rim="$layer4EPI/warped_rim.resample2muncorr.nii"
+# export warp_rs_columns_ev_1000="$layer4EPI/warped_rim_columns1000.resample2muncorr.nii"
+# export warp_rs_columns_ev_10000="$layer4EPI/warped_rim_columns10000.resample2muncorr.nii"
+
+
+export warp_scaled_parc_hcp="$layer4EPI/warped_hcp-mmp-b.scaled.nii"
+export warp_scaled_parc_thalamic="$layer4EPI/warped_ThalamicNuclei.v12.T1.scaled.nii"
+export warp_scaled_layers_ed_n10="$layer4EPI/warped_equi_distance_layers_n10.scaled.nii"  
+export warp_scaled_layers_ed_n3="$layer4EPI/warped_equi_distance_layers_n3.scaled.nii"
+export warp_scaled_layers_ev_n10="$layer4EPI/warped_equi_volume_layers_n10.scaled.nii"
+export warp_scaled_layers_ev_n3="$layer4EPI/warped_equi_volume_layers_n3.scaled.nii"
+export warp_scaled_rim="$layer4EPI/warped_rim.scaled.nii"
+export warp_scaled_columns_ev_1000="$layer4EPI/warped_rim_columns1000.scaled.nii"
+export warp_scaled_columns_ev_10000="$layer4EPI/warped_rim_columns10000.scaled.nii"
+export warp_scaled_columns_ev_10000_borders="$layer4EPI/warped_columns_ev_10000_borders.scaled.nii"
+# these scaled files are built in upsampled space, they are not resampled and built in 
+export scaled_rim="$layer_dir/rim.scaled.nii"
+
+export scaled_layers_ed_n10="$layer_dir/layers_scaled/"
+export scaled_columns_ev_10000="$layer_dir/columns_scaled/rim_columns10000.scaled.nii"
+
+
+
+
+
+#export warp_columns_ev_1000_scaled="$layer4EPI/columns_equivol_1000/warped_rim_columns1000.scaled.nii"
+
+#export warp_leakylayers3="$layer4EPI/warped_leaky_layers_n3.nii"
+
+#export warp_hcp_scaled="$layer4EPI/warped_hcp-mmp-b.scaled.nii"
+
+#export warp_leakylayers10="$layer4EPI/warped_leaky_layers_n10.nii"
+#export warp_leakylayers10_scaled="$layer4EPI/warped_leaky_layers_n10.scaled.nii"
+
+
+
+
+# # parcellations
+# export parc_hcp="$recon_dir/multiAtlasTT/hcp-mmp-b/hcp-mmp-b.nii.gz"
+# export parc_thalamic="$recon_dir/mri/ThalamicNuclei.v12.T1.mgz"
+
+# export leakylayers3="$layer4EPI/leaky_layers_n3.nii"
+
+
+# export warp_leakylayers3="$layer4EPI/warped_leaky_layers_n3.nii"
+
+# export warp_hcp="$layer4EPI/warped_hcp-mmp-b.nii"
+# export warp_hcp_scaled="$layer4EPI/warped_hcp-mmp-b.scaled.nii"
+
+# export warp_leakylayers10="$layer4EPI/warped_leaky_layers_n10.nii"
+# export warp_leakylayers10_scaled="$layer4EPI/warped_leaky_layers_n10.scaled.nii"
+
+# export columns_ev_1000="$layer4EPI/columns_equivol_1000/rim_columns1000.nii"
+# export warp_columns_ev_1000="$layer4EPI/columns_equivol_1000/warped_rim_columns1000.nii"
+# export warp_columns_ev_1000_scaled="$layer4EPI/columns_equivol_1000/warped_rim_columns1000.scaled.nii"
+
+# export columns_ev_10000="$layer4EPI/columns_equivol_10000/rim_columns10000.nii"
+# export warp_columns_ev_10000="$layer4EPI/columns_equivol_10000/warped_rim_columns10000.nii"
+
+
+
+
+export warp_parc_thalamic="${layer4EPI}/warped_ThalamicNuclei.v12.T1.nii"
+
+export rh_white="$recon_dir/surf/rh.white"
+export rh_pial="$recon_dir/surf/rh.pial"
+export lh_white="$recon_dir/surf/lh.white"
+export lh_pial="$recon_dir/surf/lh.pial"
+
+
+export ROIs_columns="$layer4EPI/ROIs_columns"
+
+export ROIs_HCP="$layer4EPI/ROIs_hcp"
+
+# CMDs
+export ROIs_hcpl10_scaled_ts_cmds="$layer4EPI/cmds/ROIs_hcpl10_scaled_ts.txt"
+export cmds_build_HCP_rois=$layer4EPI/cmds/cmds.txt
+export cmds_extract_ts="$layer4EPI/cmds/cmds_extract.txt"
+export extracted_hcpl3_cmds="$layer4EPI/cmds/cmds_extracted_hcp-l3.txt"
+
+export cmds_buildROIs_c1kl3="$layer4EPI/cmds/cmds.buildROIs.c1k.l3.txt"
+export cmds_buildROIs_thalamic="$layer4EPI/cmds/cmds.buildROIs.thalamic.l3.txt"
+export cmds_buildROIs_hcpl3="$layer4EPI/cmds/cmds.buildROIs.thalamic.l3.txt"
+
+export cmds_buildROIs_scaled_c1kl3="$layer4EPI/cmds/cmds.buildROIs.scaled.c1k.l3.txt"
+export cmds_buildROIs_scaled_thalamic="$layer4EPI/cmds/cmds.buildROIs.scaled.thalamic.l3.txt"
+export cmds_buildROIs_scaled_hcpl3="$layer4EPI/cmds/cmds.buildROIs.scaled.thalamic.l3.txt"
+export cmds_buildROIs_scaled_hcpl10="$layer4EPI/cmds/cmds.buildROIs.scaled.hcp.l10.txt"
+
+
+
+
+export cmds_extract_c1kl3="$layer4EPI/cmds/cmds.extract.c1k.l3.txt"
+export cmds_extract_thalamic="$layer4EPI/cmds/cmds.extract.thalamic.l3.txt"
+export cmds_extract_hcpl3="$layer4EPI/cmds/cmds.extract.hcp.ls.txt"
+
+# ROIs
+export rois_c1kl3="$layer4EPI/rois.c1k.l3"
+export rois_thalamic="$layer4EPI/rois.thalamic.l3"
+export rois_hcpl3="$layer4EPI/rois.hcp.l3"
+export rois_leakylayers3="$layer4EPI/rois.leakylayers.l3"
+export rois_leakylayers10="$layer4EPI/rois.leakylayers.l10"
+export rois_hcp="$layer4EPI/rois.hcp"
+
+export rois_scaled_c1kl3="$layer4EPI/rois.scaled.c1k.l3"
+export rois_scaled_thalamic="$layer4EPI/rois.scaled.thalamic.l3"
+export rois_scaled_hcpl3="$layer4EPI/rois.scaled.hcp.l3"
+export rois_scaled_leakylayers3="$layer4EPI/rois.scaled.leakylayers.l3"
+export rois_scaled_leakylayers10="$layer4EPI/rois.scaled.leakylayers.l10"
+export rois_scaled_hcp="$layer4EPI/rois.scaled.hcp"
+
+export rois_scaled_layers_ed_n10="$layer4EPI/rois.scaled.layers.ed.n10"
+
+export rois_scaled_hcp_layers_ed_n10="$layer4EPI/rois.scaled.hcp.layers.ed.n10"
+
+
+# timeseries - extracted data
+export extracted_ts="$layer4EPI/extracted_ts"
+export extracted_hcpl3="$layer4EPI/extracted_hcp-l3"
+export ROIs_columns_ts="$layer4EPI/ROIs_columns_ts"
+export ROIs_hcpl10_scaled_ts="$layer4EPI/ROIs_hcpl10_scaled_ts"
+
+export timeseries_hcpl3="$layer4EPI/timeseries.hcp.l3"
+export timeseries_c1kl3="$layer4EPI/timeseries.c1k.l3"
+export timeseries_thalamic="$layer4EPI/timeseries.thalamic"
+
+
+
+# dataframe
+export ROIs_columns_df="$layer4EPI/ROIs_columns_df"
+export ROIs_hcpl10_scaled_df="$layer4EPI/ROIs_hcpl10_scaled_df"
+
+export dataframe_c1kl3_mean="$layer4EPI/dataframe.c1kl3.mean"
+export dataframe_c1kl3_cosine="$layer4EPI/dataframe.c1kl3.cosine"
+
+
+export dataframe_hcpl3_mean="$layer4EPI/dataframe.hcpl3.mean"
+export dataframe_hcpl3_mean_matrix="$layer4EPI/dataframe.hcpl3.mean/data.mean.txt"
+export dataframe_hcpl3_mean_matrix_t="$layer4EPI/dataframe.hcpl3.mean/data.mean.t.txt"
+
+export dataframe_hcpl3_thalamic_preprocd="$layer4EPI/dataframe.hcpl3_thalamic.preprocd"
+
+# matrix
+
+export matrix_hcpl3_thalamic="$layer4EPI/matrix.hcpl3_thalamic/matrix.txt"
+export labs_hcpl3_thalamic="$layer4EPI/matrix.hcpl3_thalamic/labs.txt"
+
+
+# corrs
+export DensParcorr_hcpl3="${layer4EPI}/DensParcorr.hcp.l3"
+
+export AutoTCorr="${EPI_base_path}_3dAutoTCorr"
+
+
+export corrs_3dAutoT_hcpl3="${layer4EPI}/correlations.3dAutoT.hcpl3.l3"
+export cmds_3dAutoT_hcpl3="${layer4EPI}/cmds/cmds.3dAutoTcorrelate.hcpl3.l3.txt"
+export cmds_3dAutoT_hcpl3_mean="${layer4EPI}/cmds/cmds.3dAutoTcorrelate.hcpl3.l3.mean.txt"
+
+# analyses 
+export analysis_c1k_l3_SEED2SEED=$layer4EPI/analysis.c1k.l3.SEED2SEED
+
+
+export analysis_hcp_l3_SEED2SEED="$layer4EPI/analysis.hcp.l3.SEED2SEED"
+export cmds_SEED2SEED_hcpl3="$layer4EPI/cmds/cmds.SEED2SEED.hcp.l3.txt"
+
